@@ -1,4 +1,4 @@
 
-s = '0.123'
-f = float(s)
-print (f)
+a = 'a,b,c,d,e,'
+l = a.split(',')
+print (l)

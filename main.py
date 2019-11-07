@@ -12,6 +12,13 @@ def relu(x):
         return x
     else:
         return 0
+
+def relu_prime(x):
+    if x > 0.0:
+        return 1.0
+    else:
+        return 0.0
+
 def getMaxIndex(ls):
     m = -98987
     idx = 0
@@ -23,6 +30,7 @@ def getMaxIndex(ls):
     return idx
 
 relu_vector = np.vectorize(pyfunc=relu)
+relu_prime_vector = np.vectorize(pyfunc=relu_prime)
 
 def loadWeight(path):
     f = open(path)
@@ -61,7 +69,16 @@ def loadLabel(path):
     data = f.read()
     f.close()
     return data
-
+#reference book function
+def inference2(w1,w2,inputdata):
+    A0 = inputdata.reshape(784,1)
+    print (A0.shape())
+    #X = W * I
+    A1 = np.dot(w1 , A0)
+    A1 = relu_vector(A1)
+    A2 = np.dot(w2 , A1)
+    print (A2)
+    
 def inference(w1,w2,inputdata):
     #input middle output
 
@@ -126,7 +143,9 @@ def train(w1,w2,inputdata, label):
     Delta2 = A2 - T2
     #[100 x 1] * [1 x 10] = [100 x 10]
     dW2 = np.dot(A1.T, Delta2)
-    return dW2
+    Delta1 = np.dot(Delta2,w2.T)
+    dW1 = np.dot(inputdata.T, Delta1) * relu_prime_vector(Z1)
+    return dW1,dW2
 
 def showImage(data):
     #im = struct.unpack_from('>784B',data)
@@ -159,16 +178,18 @@ def inference_test_images(w1,w2, data,labels,start,end):
 def train_test_images(w1,w2,data,labels,start,end):
     for i in range(start,end):
         imgstart = i * 784
-        dW2 = train(w1,w2, data[imgstart:imgstart+784], labels[i:i+1])
-        dW2 = 0.1 * dW2
+        dW1,dW2 = train(w1,w2, data[imgstart:imgstart+784], labels[i:i+1])
+        dW2 = 0.05 * dW2
+        dW1 = 0.05 * dW1
         w2 = w2 - dW2
+        w1 = w1 - dW1
         #inference_test_images(w1,w2, data,labels,0,1000) 
      
     print ('train {0}-{1}'.format(start, end))
-    return w2
+    return w1,w2
 #
 #bytes
-bw1 = loadWeight('w1.csv')
+bw1 = loadWeight('w1-random.csv')
 bw2 = loadWeight('w2-random.csv')
 btestdata = loadData('t10k-images.idx3-ubyte')
 #list
@@ -193,19 +214,17 @@ weight2 = weight2.reshape(100,10)
 #    print ('inference result:{0}'.format(r))
 #showImage(testdata[start:start+784])
 testlabels = loadLabel('test_label.bin');
-
 start = 0
 end = 10000
+
 for i in range(100):
-    #print(weight2)
+        #print(weight2)
     inference_test_images(weight1,weight2,testdata,testlabels,0,10000)
-    start = i * 100
-    end   = start + 100
-    weight2 = train_test_images(weight1,weight2,testdata,testlabels,start,end)
-
-
-
-
+    start = 0
+    end   = 10000
+    w1,w2 = train_test_images(weight1,weight2,testdata,testlabels,start,end)
+    weight2 = w2
+    weight1 = w1
 
 
 
