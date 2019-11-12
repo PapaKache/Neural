@@ -1,51 +1,61 @@
 import os
 import time
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 ARRAY1 = 1
 ARRAY2 = 2
 
 #28 * 28
 def loadData(path):
-    f = open(path, 'rb')
-    data = f.read()
-    image = data[0:4]
-    number = data[4:8]
-    rows = data[8:12]
-    cols = data[12:16]
-    print('image:{0}'.format(image))
-    print('number:{0}'.format(number))
-    print('rows:{0}'.format(rows))
-    print('cols:{0}'.format(cols))
-
-    data = data[16:]
+    f = open(path)
+    lines=''
+    for line in f.readlines():
+        line = line.strip('\n')
+        line += ','
+        if len(line) > 1:
+            lines += line
+        
     f.close()
-    return data
 
-def loadLabel(path):
-    f = open(path, 'rb')
-    data = f.read()
-    f.close()
-    return data
-   
-def getLevels(labels):
+    date = []
+    value = []
+    cnt = 0
+    arr = lines.split(',')
+    #print (arr)
+    #print (arr)
+    for i in range(len(arr)):
+        if arr[i] == '':
+            continue
+        v = int(arr[i])
+        if i%2 == 0:
+            date.append(v)
+        else:
+            value.append(v)
+        cnt+= 1
+    return date,value,int(cnt/2)
+
+def getDateLevels(labels):
     cnt = len(labels)
-    arr = np.zeros((cnt, 10))
+    arr = np.zeros((cnt, 64))
     for i in range(cnt):
-        idx = labels[i]
-        arr[i][idx] = 1
+        t = labels[i]
+        for j in range(64):
+            v = (t >> j) & 0x1
+            arr[i][j] = v
+
     return arr
 
 
+def getValueLevels(labels):
+    cnt = len(labels)
+    arr = np.zeros((cnt, 49))
+    for i in range(cnt):
+        idx = labels[i]
+        idx -= 1
+        arr[i][idx] = 1
+    return arr
 
-def showImage(data):
-    #im = struct.unpack_from('>784B',data)
-    ldata = list(data)
-    im = np.array(ldata)
-    im = im.reshape(28,28)
-    fig = plt.figure()
-    plt.imshow(im, cmap='gray')
-    plt.show()
 
 class Net:
     def __init__(self):
@@ -119,6 +129,7 @@ class Net:
         s = []
         for i in range(len(label)):
             v = np.argmax(A2[i])
+            v += 1
             s.append(v)
             if v == label[i]:
                 ok += 1
@@ -138,55 +149,61 @@ class Net:
         Delta1 = np.dot(Delta2,w2.T) * self.relu_prime_vector(Z1)
         dW1 = np.dot(inputdata.T, Delta1)/size
         return dW1,dW2
+
 if __name__ == "__main__":
     net = Net()
-    bw1 = net.loadWeight('w1-random.csv')
-    bw2 = net.loadWeight('w2-random.csv')
-    btestdata = loadData('t10k-images.idx3-ubyte')
+    #w1 = np.random.normal(0,1,(64,365))
+    #w2 = np.random.normal(0,1,(365,49))
+    #net.saveWeight(w1, 'w1-6-random.csv')
+    #net.saveWeight(w2, 'w2-6-random.csv')
+
+    bw1 = net.loadWeight('w1-save.csv')
+    bw2 = net.loadWeight('w2-save.csv')
     #list
     lw1 = list(bw1)
     lw2 = list(bw2)
-    ltestdata = list(btestdata)
-
-    for i in range(len(ltestdata)):
-        if ltestdata[i] > 128:
-            ltestdata[i] = 1
-        else:
-            ltestdata[i] = 0
+    ldate,lvalue,cnt = loadData('test.csv')
+    #print (cnt)
+    #print (ldate)
+    #print (lvalue)
     #array
     weight1 = np.array(lw1)
     weight2 = np.array(lw2)
-    testdata = np.array(ltestdata)
-    testdata = testdata.reshape(10000,784)
+    datelevels =  getDateLevels(ldate)
+    #print (datelevels)
+    valuelevels = getValueLevels(lvalue)
 
-    weight1 = weight1.reshape(784,100)
-    weight2 = weight2.reshape(100,10)
-    testlabels = loadLabel('test_label.bin')
-    testlevels = getLevels(testlabels)
+    
+
+    weight1 = weight1.reshape(64,365)
+    weight2 = weight2.reshape(365,49)
 
     x = 0
     lr = 0.1
-    for i in range(2000):
+    '''
+    for t in range (60):
+        for i in range(0,32,4):
+            start = i
+            end   = start + 4
 
-        if i > 1500:
-            lr = 0.05
-        elif i > 1000:
-            lr = 0.07
-        x += 64
-        if (x > 10000 - 64):
-            x = 0
-        start = x 
-        end   = start + 64
-        dw1,dw2 = net.train(weight1,weight2,testdata[start:end],testlevels[start:end])
-        #print(dw2)
-        #exit()
-        weight1 -= lr * dw1
-        weight2 -= lr * dw2
-        #if (i + 1)%100 == 0 :
-        #    lr = lr - lr/10
-        print('epoch:{0} '.format(i), end = "")
-        p,vs = net.inference(weight1,weight2,testdata,testlabels)
-        #net.saveWeight(weight2,'w2-save.csv')
-        print(p)
+            dw1,dw2 = net.train(weight1,weight2,datelevels[start:end],valuelevels[start:end])
+            #print(dw2)
+            #exit()
+            weight1 -= lr * dw1
+            weight2 -= lr * dw2
+            #if (i + 1)%100 == 0 :
+            #    lr = lr - lr/10
+            print('epoch:{0} '.format(i), end = "")
+            p,vs = net.inference(weight1,weight2,datelevels,lvalue)
+            #net.saveWeight(weight2,'w2-save.csv')
+            print(p)
 
+    net.saveWeight(weight1,'w1-save.csv')
+    net.saveWeight(weight2,'w2-save.csv')
+    '''
+    v = list(range(32))
+    p,vs = net.inference(weight1,weight2,datelevels,v)
+    #print('infer:{0} '.format(i), end = "")
+    print(p)
+    print(vs)
 
