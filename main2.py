@@ -118,7 +118,7 @@ class Net:
             a = np.exp(Z[i] - m)
             Z[i] = a / np.sum(a)
         return Z
-
+    
     def inference(self,w1,w2,inputdata,label):
         A1 = np.dot(inputdata,w1)
         A1 = self.relu_vector(A1)
@@ -129,6 +129,12 @@ class Net:
         s = []
         for i in range(len(label)):
             v = np.argmax(A2[i])
+
+            print ('--------------->')
+            for k in range(49):
+                print(A2[i][k])
+            print ('<---------------')
+
             v += 1
             s.append(v)
             if v == label[i]:
@@ -156,13 +162,12 @@ if __name__ == "__main__":
     #w2 = np.random.normal(0,1,(365,49))
     #net.saveWeight(w1, 'w1-6-random.csv')
     #net.saveWeight(w2, 'w2-6-random.csv')
-
     bw1 = net.loadWeight('w1-save.csv')
     bw2 = net.loadWeight('w2-save.csv')
     #list
     lw1 = list(bw1)
     lw2 = list(bw2)
-    ldate,lvalue,cnt = loadData('test.csv')
+    ldate,lvalue,cnt = loadData('data.csv')
     #print (cnt)
     #print (ldate)
     #print (lvalue)
@@ -172,19 +177,20 @@ if __name__ == "__main__":
     datelevels =  getDateLevels(ldate)
     #print (datelevels)
     valuelevels = getValueLevels(lvalue)
-
+    
     
 
     weight1 = weight1.reshape(64,365)
     weight2 = weight2.reshape(365,49)
 
+'''
     x = 0
     lr = 0.1
-    '''
-    for t in range (60):
-        for i in range(0,32,4):
+
+    for t in range (100):
+        for i in range(0,cnt,32):
             start = i
-            end   = start + 4
+            end   = start + 32
 
             dw1,dw2 = net.train(weight1,weight2,datelevels[start:end],valuelevels[start:end])
             #print(dw2)
@@ -200,10 +206,17 @@ if __name__ == "__main__":
 
     net.saveWeight(weight1,'w1-save.csv')
     net.saveWeight(weight2,'w2-save.csv')
-    '''
-    v = list(range(32))
+'''
+ldata = [20191102,20191107,20191110]
+lvalue = [0,0,0]
+datelevels =  getDateLevels(ldate)
+valuelevels = getValueLevels(lvalue)
+p,vs = net.inference(weight1,weight2,datelevels,lvalue)
+
+'''
+v = list(range(32))
     p,vs = net.inference(weight1,weight2,datelevels,v)
     #print('infer:{0} '.format(i), end = "")
     print(p)
     print(vs)
-
+'''
