@@ -6,57 +6,6 @@ import matplotlib.pyplot as plt
 ARRAY1 = 1
 ARRAY2 = 2
 
-#28 * 28
-def loadData(path):
-    f = open(path)
-    lines=''
-    for line in f.readlines():
-        line = line.strip('\n')
-        line += ','
-        if len(line) > 1:
-            lines += line
-        
-    f.close()
-
-    date = []
-    value = []
-    cnt = 0
-    arr = lines.split(',')
-    #print (arr)
-    #print (arr)
-    for i in range(len(arr)):
-        if arr[i] == '':
-            continue
-        v = int(arr[i])
-        if i%2 == 0:
-            date.append(v)
-        else:
-            value.append(v)
-        cnt+= 1
-    return date,value,int(cnt/2)
-
-def getDateLevels(labels):
-    cnt = len(labels)
-    arr = np.zeros((cnt, 64))
-    for i in range(cnt):
-        t = labels[i]
-        for j in range(64):
-            v = (t >> j) & 0x1
-            arr[i][j] = v
-
-    return arr
-
-
-def getValueLevels(labels):
-    cnt = len(labels)
-    arr = np.zeros((cnt, 49))
-    for i in range(cnt):
-        idx = labels[i]
-        idx -= 1
-        arr[i][idx] = 1
-    return arr
-
-
 class Net:
     def __init__(self):
         self.relu_vector = np.vectorize(pyfunc=self.relu)
@@ -130,10 +79,10 @@ class Net:
         for i in range(len(label)):
             v = np.argmax(A2[i])
 
-            print ('--------------->')
-            for k in range(49):
-                print(A2[i][k])
-            print ('<---------------')
+            #print ('--------------->')
+            #for k in range(49):
+            #    print(A2[i][k])
+            #print ('<---------------')
 
             v += 1
             s.append(v)
@@ -141,7 +90,7 @@ class Net:
                 ok += 1
 
         percent = ok / len(label)
-        return percent,s
+        return percent,A2
     def train(self,w1,w2,inputdata, levels):
         size = len(inputdata)
         Z1 = np.dot(inputdata,w1)
@@ -155,38 +104,15 @@ class Net:
         Delta1 = np.dot(Delta2,w2.T) * self.relu_prime_vector(Z1)
         dW1 = np.dot(inputdata.T, Delta1)/size
         return dW1,dW2
-
-if __name__ == "__main__":
-    net = Net()
-    #w1 = np.random.normal(0,1,(64,365))
-    #w2 = np.random.normal(0,1,(365,49))
-    #net.saveWeight(w1, 'w1-6-random.csv')
-    #net.saveWeight(w2, 'w2-6-random.csv')
-    bw1 = net.loadWeight('w1-save.csv')
-    bw2 = net.loadWeight('w2-save.csv')
-    #list
-    lw1 = list(bw1)
-    lw2 = list(bw2)
-    ldate,lvalue,cnt = loadData('data.csv')
-    #print (cnt)
-    #print (ldate)
-    #print (lvalue)
-    #array
-    weight1 = np.array(lw1)
-    weight2 = np.array(lw2)
-    datelevels =  getDateLevels(ldate)
-    #print (datelevels)
-    valuelevels = getValueLevels(lvalue)
-    
-    
-
-    weight1 = weight1.reshape(64,365)
-    weight2 = weight2.reshape(365,49)
+#28 * 28
 
 '''
     x = 0
     lr = 0.1
-
+    ldate,lvalue,cnt = loadData('data.csv')
+    datelevels =  getDateLevels(ldate)
+    #print (datelevels)
+    valuelevels = getValueLevels(lvalue)
     for t in range (100):
         for i in range(0,cnt,32):
             start = i
@@ -207,11 +133,7 @@ if __name__ == "__main__":
     net.saveWeight(weight1,'w1-save.csv')
     net.saveWeight(weight2,'w2-save.csv')
 '''
-ldata = [20191102,20191107,20191110]
-lvalue = [0,0,0]
-datelevels =  getDateLevels(ldate)
-valuelevels = getValueLevels(lvalue)
-p,vs = net.inference(weight1,weight2,datelevels,lvalue)
+
 
 '''
 v = list(range(32))
