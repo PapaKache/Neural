@@ -13,6 +13,8 @@ import numpy as np
 import _thread as thread
 from PyQt5.QtCore import pyqtSignal
 
+from PyQt5.QtGui import QIcon
+
 def loadData(path):
     f = open(path)
     lines=''
@@ -77,6 +79,7 @@ def sort(A2):
     
 class MainWindow(QMainWindow, Ui_MainWindow):
     finsh_signal  = pyqtSignal()
+    progress_signal  = pyqtSignal(int, int)
     """
     Class documentation goes here.
     """
@@ -89,6 +92,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+        self.setWindowIcon(QIcon('image.ico'))
+        #self.show()
+
+        
         self.net = Net()
    
         bw1 = self.net.loadWeight('w1-save.csv')
@@ -107,10 +114,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.progressBarPercent.setValue(0)
         self.progressBarAcc.setValue(0)
         self.trainning = False
+        self.work = True
         self.finsh_signal.connect(self.callFinish)
+        self.progress_signal.connect(self.callProgress)
         
         
     def threadTrain(self, ls):
+        self.work = True
         self.trainning = True
         batch_size = 32
         times =ls
@@ -126,6 +136,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for t in range (times):
             
             for i in range(0,cnt,batch_size):
+                if self.work == False:
+                    break
+                    
                 start = i
                 end   = start + batch_size
                 dw1,dw2 = self.net.train(self.weight1,self.weight2,datelevels[start:end],valuelevels[start:end])
@@ -138,10 +151,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 #print('{0}*{1}+{2}/({3} * {4})={5}'.format(t, datacnt, i, times,  datacnt, cal))
                 if progress  != cal:
                     progress = cal
-                    self.progressBarPercent.setValue(progress)
+                    #self.progressBarPercent.setValue(progress)
                     acc = int(p * 100)
-                    self.progressBarAcc.setValue(acc)
+                    #self.progressBarAcc.setValue(acc)
+                    self.progress_signal.emit(progress, acc)
             if rem >0:
+                if self.work == False:
+                    break
                 start += batch_size
                 end   = start + rem
                 #print('{0},{1}'.format(start, end))
@@ -155,20 +171,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 #print('{0}*{1}+{2}/({3} * {4})={5}'.format(t, datacnt, i, times,  datacnt, cal))
                 if progress  != cal:
                     progress = cal
-                    self.progressBarPercent.setValue(progress)
+                    #self.progressBarPercent.setValue(progress)
                     acc = int(p * 100)
-                    self.progressBarAcc.setValue(acc)
+                    #self.progressBarAcc.setValue(acc)
+                    self.progress_signal.emit(progress, acc)
                 
         #self.progressBarPercent.setValue(100)
         
         self.net.saveWeight(self.weight1,'w1-save.csv')
         self.net.saveWeight(self.weight2,'w2-save.csv')
         self.finsh_signal.emit()
+        
         #
         self.trainning = False
     def callFinish(self):
         self.progressBarPercent.setValue(100)
         self.textEditResult.setText('训练完成')
+        
+    def callProgress(self, progress, acc):
+        self.progressBarAcc.setValue(acc)
+        self.progressBarPercent.setValue(progress)
+                
         
     @pyqtSlot()
     def on_pushButtonTrain_clicked(self):
@@ -176,6 +199,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.trainning == True:
             self.textEditResult.setText('正在训练')
             return
+        self.progressBarAcc.setValue(0)
+        self.progressBarPercent.setValue(0)
         times = self.horizontalSlider.value()
         #self.labelTime.setText(str(times))
         print(times)
@@ -183,6 +208,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
        
     @pyqtSlot()
     def on_pushButtonInference_clicked(self):
+        if self.trainning == True:
+            self.textEditResult.setText('正在训练')
+            return
         date = self.calendarWidget.selectedDate()
         t = str(date.toPyDate())
         l = t.split('-')
@@ -200,7 +228,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             s += str(n)
             s += ','
         self.textEditResult.setText(s)
-            
+        
+    @pyqtSlot()    
+    def on_pushButtonAcc_clicked(self):
+        if self.trainning == True:
+            self.textEditResult.setText('正在训练')
+            return
+        ldate,lvalue,datacnt = loadData('data.csv')
+        datelevels =  getDateLevels(ldate)
+        #print (datelevels)
+       
+        p,vs = self.net.inference(self.weight1,self.weight2,datelevels,lvalue)
+        acc = int(p * 100)
+        self.progressBarAcc.setValue(acc)
+        self.progressBarPercent.setValue(100)
     def valuechange(self):
         times = self.horizontalSlider.value()
         self.labelTime.setText(str(times))
+    
+    @pyqtSlot()
+    def on_pushButtonStop_clicked(self):
+        self.work = False
