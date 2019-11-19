@@ -108,30 +108,7 @@ class Net:
 
 '''
     x = 0
-    lr = 0.1
-    ldate,lvalue,cnt = loadData('data.csv')
-    datelevels =  getDateLevels(ldate)
-    #print (datelevels)
-    valuelevels = getValueLevels(lvalue)
-    for t in range (100):
-        for i in range(0,cnt,32):
-            start = i
-            end   = start + 32
-
-            dw1,dw2 = net.train(weight1,weight2,datelevels[start:end],valuelevels[start:end])
-            #print(dw2)
-            #exit()
-            weight1 -= lr * dw1
-            weight2 -= lr * dw2
-            #if (i + 1)%100 == 0 :
-            #    lr = lr - lr/10
-            print('epoch:{0} '.format(i), end = "")
-            p,vs = net.inference(weight1,weight2,datelevels,lvalue)
-            #net.saveWeight(weight2,'w2-save.csv')
-            print(p)
-
-    net.saveWeight(weight1,'w1-save.csv')
-    net.saveWeight(weight2,'w2-save.csv')
+    
 '''
 
 
